@@ -1,0 +1,135 @@
+---
+title: "Linear models"
+output:
+  pdf_document:
+    latex_engine: lualatex
+  html_document: default
+date: '2023-04-29'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(carData)
+
+```
+
+# Exercises
+
+Using the data set Soils:
+
+#### 1 Fit the following model:
+
+pH = β0 + β1 N + β2 P + β3 Ca + β4 Mg + β5 K + β6 Na + ε
+
+```{r}
+
+# Predictor variables
+pred_vars <- c("N", "P", "Ca", "Mg", "K", "Na")
+
+# Create the equation
+form <- str_c("pH", " ~ ", str_c(pred_vars, collapse = " + ")) %>% 
+  as.formula()
+
+# Fit the model
+m1 <- lm(formula = form, data = Soils)
+
+summary(m1)
+```
+
+#### 2 Make the analysis of diagnostics - plot the residuals and identify possible leverage points and outliers.
+
+Below we have the residuals, or error. In the y axis is expected that the values fluctuate around the 0, since we want to minimize the error. In the x axis between 4 and 5 we have values with low error, however, after 5, we have the tendency line being down skewed. It might be an indication of heterocedasticity.
+
+```{r}
+plot(m1, which = 1)
+```
+
+Below we have a qq-plot that helps to identifiy if our residuals are normal distributed. Errors are expecte to be random and consequently follows a normal distribution. Below our residuals tend to follow the dashed line, which suggests that they might be normal distributed.
+
+```{r}
+plot(m1, which = 2)
+```
+
+Standardized residuals are difficult to interpret, it's easy to understand based on not standardized.
+
+```{r}
+plot(m1, which = 3)
+```
+
+Cook's distance are useful to detect outliers and leverage points. Below we see the samples 18, 24 and 33 highlighted. Dot 18 and 33 is still inside where the biggest amount of the data are, than it's ok. Dot 24, however is above 1 standardized residuals, suggesting that this point influence the model. Then we could remove it and fit another model to check its influence.
+
+```{r}
+plot(m1, which = 5)
+```
+
+#### 3 Based on ANOVA, is there any variable that is not significant to explain pH?
+
+Our anova results suggests that P, Mg, K and Na are not statistically important to explain pH.
+
+```{r}
+anova(m1)
+```
+
+#### 4 What happens when we fit the following model:
+
+pH = β1 N + β2 P + β3 Ca + β4 Mg + β5 K + β6 Na + ε?
+
+Repeat analyses 1, 2 and 3.
+
+Briefly, we observe variables that were important in m1, are not statistically important anymore to expain pH when compared to m2, except for Ca. This was in consequence of intercept removal.
+
+```{r}
+
+# Predictor variables
+pred_vars <- c(-1, "N", "P", "Ca", "Mg", "K", "Na")
+
+# Create the equation
+form <- str_c("pH", " ~ ", str_c(pred_vars, collapse = " + ")) %>% 
+  as.formula()
+
+# Fit the model
+m2 <- lm(formula = form, data = Soils)
+
+summary(m2)
+```
+
+#### 5 Now include Block effects. What can we see?
+
+With the addition of Block to our model, Block 2 and 4 are statistically important to explain the variability in soils data, besides intercept, N, Ca.
+
+```{r}
+
+# Predictor variables
+pred_vars <- c("N", "P", "Ca", "Mg", "K", "Na", "Block")
+
+# Create the equation
+form <- str_c("pH", " ~ ", str_c(pred_vars, collapse = " + ")) %>% 
+  as.formula()
+
+# Fit the model
+m3 <- lm(formula = form, data = Soils)
+
+summary(m3)
+```
+
+#### 6 Is there any significant block effect?
+
+Yes, blocks 2 and 4
+
+#### 7 Is there any variable deviating from normality? Is there any transformation possible?
+
+For all scenarios below, I would assume that all variables don't deviate from normality, based on the shapiro test.
+
+```{r}
+bind_rows(
+  shapiro.test(residuals(m1)) %>% broom::tidy() %>% mutate(model = "m1"),
+  shapiro.test(residuals(m2)) %>% broom::tidy() %>% mutate(model = "m2"),
+  shapiro.test(residuals(m3)) %>% broom::tidy() %>% mutate(model = "m3")
+)
+
+```
+
+#### 8 Is there some normalization that we could apply?
+
+Since all models are normal distributed, we don't need to apply any normalization.
